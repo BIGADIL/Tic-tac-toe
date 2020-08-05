@@ -5,37 +5,42 @@ import enums.CellType;
 
 import java.util.Arrays;
 
-public class Board {
-
+public class ImplBoard {
     public static final int BOARD_SIZE = 3;
-
     private final CellType[][] cells = new CellType[BOARD_SIZE][BOARD_SIZE];
-
     private int nextPlayerId = 0;
+    private int numEmptyCells;
 
-    public Board() {
+    public ImplBoard() {
         for (final CellType[] cell : cells) {
             Arrays.fill(cell, CellType.EMPTY);
         }
+        numEmptyCells = BOARD_SIZE * BOARD_SIZE;
     }
 
-    private Board(final Board board) {
+    private ImplBoard(final ImplBoard board) {
         for (int i = 0; i < board.cells.length; i++) {
             System.arraycopy(board.cells[i], 0, cells[i], 0, board.cells[i].length);
         }
         nextPlayerId = board.nextPlayerId;
+        numEmptyCells = board.numEmptyCells;
     }
 
-    public Board getCopy(final AIAnswer answer) {
-        final Board copy = new Board(this);
+    public ImplBoard getCopy(final AIAnswer answer) {
+        final ImplBoard copy = getCopy();
         copy.act(answer);
         return copy;
+    }
+
+    public ImplBoard getCopy() {
+        return new ImplBoard(this);
     }
 
     public void act(final AIAnswer answer) {
         final int x = answer.x;
         final int y = answer.y;
         cells[x][y] = answer.cellType;
+        numEmptyCells--;
         nextPlayerId = (nextPlayerId + 1) % 2;
     }
 
@@ -45,6 +50,10 @@ public class Board {
 
     public int getNextPlayerId() {
         return nextPlayerId;
+    }
+
+    public boolean isFullBoard() {
+        return numEmptyCells == 0;
     }
 
     @Override

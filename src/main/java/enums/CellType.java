@@ -12,12 +12,7 @@ public enum CellType {
         this.code = code;
     }
 
-    public static CellType getRevertType(final CellType myType) {
-        if (myType == CROSSES) {
-            return NOUGHTS;
-        } else if (myType == NOUGHTS) {
-            return CROSSES;
-        }
-        throw new IllegalArgumentException("Unsupported for revert = " + myType);
+    public boolean isPlayingCellType() {
+        return this == NOUGHTS || this == CROSSES;
     }
 }

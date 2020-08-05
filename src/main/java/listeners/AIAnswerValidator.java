@@ -1,13 +1,13 @@
 package listeners;
 
 import answer.AIAnswer;
-import board.Board;
+import board.ImplBoard;
 import enums.CellType;
 
 public class AIAnswerValidator {
 
     public void validateAnswer(final AIAnswer answer,
-                               final Board board,
+                               final ImplBoard board,
                                final CellType expectedCell) {
         final int x = answer.x;
         final int y = answer.y;
