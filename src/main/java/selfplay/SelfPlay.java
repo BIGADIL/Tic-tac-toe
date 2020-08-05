@@ -9,12 +9,16 @@ import enums.CellType;
 import enums.WinnerType;
 import listeners.AIAnswerValidator;
 import listeners.EndOfGameDetector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.EnumMap;
 import java.util.HashMap;
 import java.util.Map;
 
 public class SelfPlay {
+
+    private static final Logger logger = LoggerFactory.getLogger(SelfPlay.class);
 
     private final BaseBot[] bots = new BaseBot[2];
 
@@ -80,7 +84,7 @@ public class SelfPlay {
 
     public static void main(final String[] args) {
         final SelfPlay selfPlay = new SelfPlay();
-        final int numGames = 1000;
+        final int numGames = 100;
         for (int i = 0; i < numGames; i++) {
             selfPlay.prepareBotsForPlay();
             selfPlay.gameLoop();
@@ -89,9 +93,9 @@ public class SelfPlay {
         for (final Map.Entry<BaseBot, Integer> e : selfPlay.winRate.entrySet()) {
             final double winRate = e.getValue() / (double) numGames  * 100;
             draw -= e.getValue();
-            System.out.println(String.format("%s's win rate = %.2f %%", e.getKey().name, winRate));
+            logger.info("{}'s win rate = {} %", e.getKey().name, winRate);
         }
-        draw = draw / numGames * 100;
-        System.out.println(String.format("Draw=%.2f %%", draw));
+        draw = draw / numGames * 100.0D;
+        logger.info("Draw={} %", draw);
     }
 }

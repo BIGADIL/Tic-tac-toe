@@ -5,16 +5,22 @@ import board.Board;
 import enums.CellType;
 import enums.WinnerType;
 import listeners.EndOfGameDetector;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.*;
 
 public class SimBot extends BaseBot {
 
-    private final Map<WinnerType, CellType> map = new EnumMap<>(WinnerType.class);
+    private static Logger logger = LoggerFactory.getLogger(SimBot.class);
+
+    private static final double EPS = 1.0e-9;
+
+    private final Map<WinnerType, CellType> mapWinnerTypeOnCellType = new EnumMap<>(WinnerType.class);
 
     private final EndOfGameDetector eogDetector = new EndOfGameDetector();
 
-    private static final class AnswerAndWin implements Comparable<AnswerAndWin> {
+    private static final class AnswerAndWin {
         final AIAnswer answer;
         final WinCollector winCollector;
 
@@ -24,41 +30,36 @@ public class SimBot extends BaseBot {
         }
 
         @Override
-        public int compareTo(final AnswerAndWin o) {
-            return -Double.compare(winCollector.win, o.winCollector.win);
-        }
-
-        @Override
-        public boolean equals(final Object obj) {
-            if (!(obj instanceof AnswerAndWin)) return false;
-            return compareTo((AnswerAndWin) obj) == 0;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(answer, winCollector);
+        public String toString() {
+            return answer + " -> " + winCollector;
         }
     }
 
     public SimBot(final int id, final String name, final CellType myType) {
         super(id, name, myType);
-        map.put(WinnerType.CROSSES, CellType.CROSSES);
-        map.put(WinnerType.NOUGHTS, CellType.NOUGHTS);
+        mapWinnerTypeOnCellType.put(WinnerType.CROSSES, CellType.CROSSES);
+        mapWinnerTypeOnCellType.put(WinnerType.NOUGHTS, CellType.NOUGHTS);
     }
 
     @Override
     public AIAnswer getAnswer(final Board board) {
         final List<Coord> coordToAct = getAllPossibleCoordToAct(board);
-        final List<AnswerAndWin> aw = new ArrayList<>();
+        final List<AnswerAndWin> awList = new ArrayList<>();
         for (final Coord coord : coordToAct) {
             final AIAnswer aiAnswer = new AIAnswer(coord.x, coord.y, myType);
-            final Board copy = board.getCopy();
-            copy.act(aiAnswer);
+            final Board copy = board.getCopy(aiAnswer);
             final WinCollector winCollector = getWinByGameTree(copy);
-            aw.add(new AnswerAndWin(aiAnswer, winCollector));
+            awList.add(new AnswerAndWin(aiAnswer, winCollector));
         }
-        Collections.sort(aw);
-        return aw.get(0).answer;
+        logDecisions(awList);
+
+        return getGreedyDecision(awList).answer;
+    }
+
+    private void logDecisions(final List<AnswerAndWin> awList) {
+        logger.info("--{}: print decisions", name);
+        awList.forEach(aw -> logger.info("--{}: {}", name, aw));
+        logger.info("");
     }
 
     private WinCollector getWinByGameTree(final Board board) {
@@ -66,80 +67,118 @@ public class SimBot extends BaseBot {
         if (winnerType != WinnerType.NONE) {
             return distributeWin(winnerType);
         }
-        final var nextPlayerId = board.getNextPlayerId();
+        final int nextPlayerId = board.getNextPlayerId();
         final List<Coord> coordToAct = getAllPossibleCoordToAct(board);
         if (nextPlayerId == id) {
             final List<AnswerAndWin> aw = new ArrayList<>();
             for (final Coord coord : coordToAct) {
                 final AIAnswer aiAnswer = new AIAnswer(coord.x, coord.y, myType);
-                final Board copy = board.getCopy();
-                copy.act(aiAnswer);
+                final Board copy = board.getCopy(aiAnswer);
                 final WinCollector winCollector = getWinByGameTree(copy);
                 aw.add(new AnswerAndWin(aiAnswer, winCollector));
             }
-            Collections.sort(aw);
-            return aw.get(0).winCollector;
+            return getGreedyDecision(aw).winCollector.catchBrokenProbabilities();
         } else {
             final List<WinCollector> winCollectors = new ArrayList<>();
             for (final Coord coord : coordToAct) {
                 final AIAnswer aiAnswer = new AIAnswer(coord.x, coord.y, CellType.getRevertType(myType));
-                final Board copy = board.getCopy();
-                copy.act(aiAnswer);
+                final Board copy = board.getCopy(aiAnswer);
                 final WinCollector winCollector = getWinByGameTree(copy);
                 winCollectors.add(winCollector);
             }
-            return getMixedDecision(winCollectors);
+            return getMixedDecision(winCollectors).catchBrokenProbabilities();
         }
     }
 
     private WinCollector getMixedDecision(final List<WinCollector> winCollectors) {
         final double sequenceLength = (double) winCollectors.size();
         final double p = 1.0D / sequenceLength;
-        final WinCollector mixedWin = new WinCollector(0.0D);
+        final WinCollector mixedWin = new WinCollector(0.0D, 0.0D, 0.0D, 0.0D, 0.0D);
         for (final WinCollector winCollector : winCollectors) {
             mixedWin.add(winCollector, p);
         }
-        return mixedWin;
+        return mixedWin.catchBrokenProbabilities();
+    }
+
+    private AnswerAndWin getGreedyDecision(final List<AnswerAndWin> awList) {
+        AnswerAndWin bestDecision = null;
+        for (final AnswerAndWin tmpDecision : awList) {
+            if (bestDecision == null) {
+                bestDecision = tmpDecision;
+                continue;
+            }
+            final double bestTotalWin = bestDecision.winCollector.getTotalWin();
+            final double tmpTotalWin = tmpDecision.winCollector.getTotalWin();
+            final double bestWin = bestDecision.winCollector.win;
+            final double tmpWin = tmpDecision.winCollector.getTotalWin();
+            if (tmpTotalWin > bestTotalWin || (Math.abs(tmpTotalWin - bestTotalWin) < EPS && tmpWin > bestWin)) {
+                bestDecision = tmpDecision;
+            }
+        }
+        if (bestDecision == null) {
+            throw new IllegalArgumentException("Can't find best decision");
+        }
+        return bestDecision;
     }
 
     private WinCollector distributeWin(final WinnerType winnerType) {
+        final WinCollector result;
         if (winnerType == WinnerType.DRAW) {
-            return new WinCollector(IWinCollector.WIN_FOR_DRAW);
+            result = new WinCollector(0.0D, 0.5D, 0.0D, 0.0D, 1.0D);
+        } else {
+            final CellType winnerCellType = mapWinnerTypeOnCellType.get(winnerType);
+            if (winnerCellType == myType) {
+                result = new WinCollector(1.0D, 0.0D, 0.0D, 1.0D, 0.0D);
+            } else {
+                result = new WinCollector(0.0D, 0.0D, 1.0D, 0.0D, 0.0D);
+            }
         }
-        final CellType winnerCellType = map.get(winnerType);
-        if (winnerCellType == myType) {
-            return new WinCollector(IWinCollector.WIN_FOR_WIN);
-        }
-        return new WinCollector(IWinCollector.WIN_FOR_LOOSE);
+        return result.catchBrokenProbabilities();
     }
 
-    interface IWinCollector {
-        double WIN_FOR_DRAW = 0.5D;
 
-        double WIN_FOR_WIN = 1.0D;
-
-        double WIN_FOR_LOOSE = 0.0D;
-
-        void add(final IWinCollector w, final double p);
-
-        double getWin();
-    }
-
-    private static class WinCollector implements IWinCollector{
+    private static class WinCollector {
         double win;
+        double drawWin;
+        double pLoose;
+        double pWin;
+        double pDraw;
 
-        WinCollector(final double win) {
+        WinCollector(final double win,
+                     final double drawWin,
+                     final double pLoose,
+                     final double pWin,
+                     final double pDraw) {
             this.win = win;
+            this.drawWin = drawWin;
+            this.pLoose = pLoose;
+            this.pWin = pWin;
+            this.pDraw = pDraw;
+        }
+
+        public void add(final WinCollector w, final double p) {
+            win += p * w.win;
+            drawWin += p * w.drawWin;
+            pLoose += p * w.pLoose;
+            pWin += p * w.pWin;
+            pDraw += p * w.pDraw;
+        }
+
+        public double getTotalWin() {
+            return win + drawWin;
+        }
+
+        public WinCollector catchBrokenProbabilities() {
+            final double sumP = pDraw + pWin + pLoose;
+            if (Math.abs(sumP - 1.0D) > EPS) {
+                throw new IllegalStateException("Sum proba != 1: " + sumP);
+            }
+            return this;
         }
 
         @Override
-        public void add(final IWinCollector w, final double p) {
-            win += p * w.getWin();
-        }
-
-        @Override
-        public double getWin() {
-            return win;
+        public String toString() {
+            return String.format("win=%.2f, drawWin=%.2f, pLoose=%.2f, pWin=%.2f, pDraw=%.2f", win, drawWin, pLoose, pWin, pDraw);
         }
     }
 }

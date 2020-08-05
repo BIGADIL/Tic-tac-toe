@@ -26,8 +26,10 @@ public class Board {
         nextPlayerId = board.nextPlayerId;
     }
 
-    public Board getCopy() {
-        return new Board(this);
+    public Board getCopy(final AIAnswer answer) {
+        final Board copy = new Board(this);
+        copy.act(answer);
+        return copy;
     }
 
     public void act(final AIAnswer answer) {

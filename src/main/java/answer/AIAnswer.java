@@ -15,4 +15,9 @@ public class AIAnswer {
         this.y = y;
         this.cellType = cellType;
     }
+
+    @Override
+    public String toString() {
+        return String.format("[(%d, %d) - %s]", x, y, cellType);
+    }
 }
