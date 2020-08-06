@@ -8,7 +8,8 @@ import listeners.EndOfGameDetector;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.function.Function;
 
 /**
@@ -31,6 +32,8 @@ public class SimBot extends BaseBot {
 
     private final EndOfGameDetector eogDetector = new EndOfGameDetector();
     private final boolean isPrintLogs = true;
+
+    private long genTime = 0L;
 
     private static final class AnswerAndWin {
         final AIAnswer answer;
@@ -57,6 +60,7 @@ public class SimBot extends BaseBot {
     public AIAnswer getAnswer(final ImplBoard board) {
         totalNodes = 0;
         terminalNodes = 0;
+        final long startTime = System.currentTimeMillis();
         final List<Coord> coordToAct = getAllPossibleCoordToAct(board);
         final List<AnswerAndWin> awList = new ArrayList<>();
         for (final Coord coord : coordToAct) {
@@ -66,8 +70,8 @@ public class SimBot extends BaseBot {
             final WinCollector winCollector = getWinByGameTree(copy);
             awList.add(new AnswerAndWin(aiAnswer, winCollector));
         }
+        genTime = System.currentTimeMillis() - startTime;
         logDecisions(awList);
-
         return getGreedyDecision(awList).answer;
     }
 
@@ -79,6 +83,7 @@ public class SimBot extends BaseBot {
         awList.forEach(aw -> logger.info("--{}: {}", name, aw));
         logger.info("--{}: total num nodes = {}", name, totalNodes);
         logger.info("--{}: terminal num nodes = {}", name, terminalNodes);
+        logger.info("--{}: genTime = {} millis", name, genTime);
         logger.info("");
     }
 

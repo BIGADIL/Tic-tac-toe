@@ -34,6 +34,8 @@ public class MaxMaxBot extends BaseBot {
     private final boolean isPrintLogs = true;
     private final Random rnd = new Random();
 
+    private long genTime = 0L;
+
     private static final class AnswerAndWin {
         final AIAnswer answer;
         final WinCollector winCollector;
@@ -56,14 +58,19 @@ public class MaxMaxBot extends BaseBot {
 
     @Override
     public AIAnswer getAnswer(final ImplBoard board) {
+        terminalNodes = 0;
+        totalNodes = 0;
+        final long startTime = System.currentTimeMillis();
         final List<Coord> coordToAct = getAllPossibleCoordToAct(board);
         final List<AnswerAndWin> awList = new ArrayList<>();
         for (final Coord coord : coordToAct) {
+            totalNodes++;
             final AIAnswer aiAnswer = new AIAnswer(coord.x, coord.y, botCellType);
             final ImplBoard copy = board.getCopy(aiAnswer);
             final WinCollector winCollector = getWinByGameTree(copy);
             awList.add(new AnswerAndWin(aiAnswer, winCollector));
         }
+        genTime = System.currentTimeMillis() - startTime;
         logDecisions(awList);
         return getGreedyDecision(awList, WinCollector::getTotalWin).answer;
     }
@@ -74,6 +81,9 @@ public class MaxMaxBot extends BaseBot {
         }
         logger.info("--{}: print decisions", name);
         awList.forEach(aw -> logger.info("--{}: {}", name, aw));
+        logger.info("--{}: total num nodes = {}", name, totalNodes);
+        logger.info("--{}: terminal num nodes = {}", name, terminalNodes);
+        logger.info("--{}: genTime = {} millis", name, genTime);
         logger.info("");
     }
 
@@ -95,6 +105,7 @@ public class MaxMaxBot extends BaseBot {
         }
         final List<AnswerAndWin> awList = new ArrayList<>();
         for (final Coord coord : coordToAct) {
+            totalNodes++;
             final AIAnswer aiAnswer = new AIAnswer(coord.x, coord.y, simCellType);
             final ImplBoard copy = board.getCopy(aiAnswer);
             final WinCollector winCollector = getWinByGameTree(copy);
