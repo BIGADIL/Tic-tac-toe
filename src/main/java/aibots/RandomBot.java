@@ -1,6 +1,7 @@
 package aibots;
 
 import answer.AIAnswer;
+import board.Coord;
 import board.ImplBoard;
 import enums.CellType;
 
@@ -26,7 +27,7 @@ public class RandomBot extends BaseBot {
 
     @Override
     public AIAnswer getAnswer(final ImplBoard board) {
-        final List<Coord> coordToAct = getAllPossibleCoordToAct(board);
+        final List<Coord> coordToAct = board.getAllPossibleCoordToAct();
         final int randomIdx = rnd.nextInt(coordToAct.size());
         final Coord coord = coordToAct.get(randomIdx);
         return new AIAnswer(coord.x, coord.y, botCellType);

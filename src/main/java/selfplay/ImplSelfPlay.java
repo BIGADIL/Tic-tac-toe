@@ -1,8 +1,8 @@
 package selfplay;
 
 import aibots.IBot;
-import aibots.MaxMaxBot;
-import aibots.SimBot;
+import aibots.MinMaxBot;
+import aibots.RandomBot;
 import answer.AIAnswer;
 import board.ImplBoard;
 import enums.CellType;
@@ -24,19 +24,23 @@ public class ImplSelfPlay implements ISelfPlay {
     private final IBot[] bots;
     private final EndOfGameDetector eogDetector;
     private final AIAnswerValidator validator;
+    private final int boardSize;
+
     private ImplBoard board;
     private final Map<IBot, Integer> winRate;
     private int numDraws;
     private boolean isFirstGame;
 
-    public ImplSelfPlay(final IBot.IBotFactory[] factories) {
+
+    public ImplSelfPlay(final IBot.IBotFactory[] factories, final int boardSize) {
         if (factories.length != NUM_PLAYERS) {
             throw new IllegalStateException("Factories length " + factories.length + " != " + NUM_PLAYERS);
         }
         bots = new IBot[NUM_PLAYERS];
         bots[0] = factories[0].createBot(CellType.NOUGHTS);
         bots[1] = factories[1].createBot(CellType.CROSSES);
-        board = new ImplBoard();
+        this.boardSize = boardSize;
+        board = new ImplBoard(boardSize);
         numDraws = 0;
         eogDetector = new EndOfGameDetector();
         validator = new AIAnswerValidator();
@@ -44,7 +48,7 @@ public class ImplSelfPlay implements ISelfPlay {
         for (final IBot bot : bots) {
             winRate.put(bot, 0);
         }
-        isFirstGame = false;
+        isFirstGame = true;
     }
 
     @Override
@@ -59,6 +63,8 @@ public class ImplSelfPlay implements ISelfPlay {
     private void prepareBotsForPlay() {
         if (isFirstGame) {
             isFirstGame = false;
+            bots[0].setId(0);
+            bots[1].setId(1);
             return;
         }
         final IBot tmpBot = bots[0];
@@ -66,7 +72,7 @@ public class ImplSelfPlay implements ISelfPlay {
         bots[1] = tmpBot;
         bots[0].setId(0);
         bots[1].setId(1);
-        board = new ImplBoard();
+        board = new ImplBoard(boardSize);
     }
 
     private void gameLoop() {
@@ -115,10 +121,10 @@ public class ImplSelfPlay implements ISelfPlay {
 
     public static void main(final String[] args) {
         final IBot.IBotFactory[] factories = {
-                SimBot.factory,
-                MaxMaxBot.factory,
+                RandomBot.factory,
+                MinMaxBot.factory,
         };
-        final ISelfPlay selfPlay = new ImplSelfPlay(factories);
-        selfPlay.playSomeGames(100);
+        final ISelfPlay selfPlay = new ImplSelfPlay(factories, 4);
+        selfPlay.playSomeGames(10);
     }
 }
