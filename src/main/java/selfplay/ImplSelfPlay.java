@@ -2,6 +2,7 @@ package selfplay;
 
 import aibots.IBot;
 import aibots.MinMaxBot;
+import aibots.MinMaxWithABBot;
 import aibots.RandomBot;
 import answer.AIAnswer;
 import board.ImplBoard;
@@ -122,9 +123,9 @@ public class ImplSelfPlay implements ISelfPlay {
     public static void main(final String[] args) {
         final IBot.IBotFactory[] factories = {
                 RandomBot.factory,
-                MinMaxBot.factory,
+                MinMaxWithABBot.factory,
         };
         final ISelfPlay selfPlay = new ImplSelfPlay(factories, 4);
-        selfPlay.playSomeGames(10);
+        selfPlay.playSomeGames(100);
     }
 }

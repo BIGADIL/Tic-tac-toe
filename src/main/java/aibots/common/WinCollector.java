@@ -24,6 +24,19 @@ public class WinCollector {
         this.pDraw = pDraw;
     }
 
+    private WinCollector(final WinCollector w) {
+        win = w.win;
+        drawWin = w.drawWin;
+        looseWin = w.looseWin;
+        pLoose = w.pLoose;
+        pWin = w.pWin;
+        pDraw = w.pDraw;
+    }
+
+    public WinCollector getCopy() {
+        return new WinCollector(this);
+    }
+
     public void add(final WinCollector w, final double p) {
         win += p * w.win;
         drawWin += p * w.drawWin;

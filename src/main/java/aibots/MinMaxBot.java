@@ -118,7 +118,7 @@ public class MinMaxBot extends BaseBot {
             final WinCollector termNodeWinCollector = distributeMaxRecNode(board, simCellType);
             return termNodeWinCollector.catchBrokenProbabilities();
         }
-        final List<Coord> coordToAct = getCutCoordToAct(board.getAllPossibleCoordToAct());
+        final List<Coord> coordToAct = dropoutCoordToAct(board.getAllPossibleCoordToAct());
         final List<AnswerAndWin> awList = new ArrayList<>();
         for (final Coord coord : coordToAct) {
             totalNodes++;
@@ -131,7 +131,7 @@ public class MinMaxBot extends BaseBot {
         return greedyDecision.winCollector.catchBrokenProbabilities();
     }
 
-    private List<Coord> getCutCoordToAct(final List<Coord> coordToAct) {
+    private List<Coord> dropoutCoordToAct(final List<Coord> coordToAct) {
         if (coordToAct.size() <= numSimulatedNodes) {
             return coordToAct;
         }
