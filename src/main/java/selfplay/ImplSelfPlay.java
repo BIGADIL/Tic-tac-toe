@@ -1,9 +1,6 @@
 package selfplay;
 
-import aibots.IBot;
-import aibots.MinMaxBot;
-import aibots.MinMaxWithABBot;
-import aibots.RandomBot;
+import aiagents.*;
 import answer.AIAnswer;
 import board.ImplBoard;
 import enums.CellType;
@@ -22,31 +19,31 @@ public class ImplSelfPlay implements ISelfPlay {
     private static final int NUM_PLAYERS = 2;
     private static final Logger logger = LoggerFactory.getLogger(ImplSelfPlay.class);
 
-    private final IBot[] bots;
+    private final IAgent[] agents;
     private final EndOfGameDetector eogDetector;
     private final AIAnswerValidator validator;
     private final int boardSize;
 
     private ImplBoard board;
-    private final Map<IBot, Integer> winRate;
+    private final Map<IAgent, Integer> winRate;
     private int numDraws;
     private boolean isFirstGame;
 
 
-    public ImplSelfPlay(final IBot.IBotFactory[] factories, final int boardSize) {
+    public ImplSelfPlay(final IAgent.IAgentFactory[] factories, final int boardSize) {
         if (factories.length != NUM_PLAYERS) {
             throw new IllegalStateException("Factories length " + factories.length + " != " + NUM_PLAYERS);
         }
-        bots = new IBot[NUM_PLAYERS];
-        bots[0] = factories[0].createBot(CellType.NOUGHTS);
-        bots[1] = factories[1].createBot(CellType.CROSSES);
+        agents = new IAgent[NUM_PLAYERS];
+        agents[0] = factories[0].createAgent(CellType.NOUGHTS);
+        agents[1] = factories[1].createAgent(CellType.CROSSES);
         this.boardSize = boardSize;
         board = new ImplBoard(boardSize);
         numDraws = 0;
         eogDetector = new EndOfGameDetector();
         validator = new AIAnswerValidator();
         winRate = new HashMap<>();
-        for (final IBot bot : bots) {
+        for (final IAgent bot : agents) {
             winRate.put(bot, 0);
         }
         isFirstGame = true;
@@ -64,23 +61,23 @@ public class ImplSelfPlay implements ISelfPlay {
     private void prepareBotsForPlay() {
         if (isFirstGame) {
             isFirstGame = false;
-            bots[0].setId(0);
-            bots[1].setId(1);
+            agents[0].setId(0);
+            agents[1].setId(1);
             return;
         }
-        final IBot tmpBot = bots[0];
-        bots[0] = bots[1];
-        bots[1] = tmpBot;
-        bots[0].setId(0);
-        bots[1].setId(1);
+        final IAgent tmpBot = agents[0];
+        agents[0] = agents[1];
+        agents[1] = tmpBot;
+        agents[0].setId(0);
+        agents[1].setId(1);
         board = new ImplBoard(boardSize);
     }
 
     private void gameLoop() {
         while (true) {
-            for (final IBot bot : bots) {
+            for (final IAgent bot : agents) {
                 final AIAnswer answer = bot.getAnswer(board.getCopy());
-                validator.validateAnswer(answer, board, bot.getBotCellType());
+                validator.validateAnswer(answer, board, bot.getAgentCellType());
                 board.act(answer);
                 final WinnerType winnerType = eogDetector.detectWinner(board);
                 switch (winnerType) {
@@ -90,11 +87,11 @@ public class ImplSelfPlay implements ISelfPlay {
                     case NONE:
                         break;
                     case CROSSES:
-                        final IBot crossWinnerBot = findWinnerByCellType(CellType.CROSSES);
+                        final IAgent crossWinnerBot = findWinnerByCellType(CellType.CROSSES);
                         winRate.merge(crossWinnerBot, 1, Integer::sum);
                         return;
                     case NOUGHTS:
-                        final IBot noughtsWinnerBot = findWinnerByCellType(CellType.NOUGHTS);
+                        final IAgent noughtsWinnerBot = findWinnerByCellType(CellType.NOUGHTS);
                         winRate.merge(noughtsWinnerBot, 1, Integer::sum);
                         return;
                     default:
@@ -104,8 +101,8 @@ public class ImplSelfPlay implements ISelfPlay {
         }
     }
 
-    private IBot findWinnerByCellType(final CellType cellType) {
-        return Arrays.stream(bots).filter(bot -> bot.getBotCellType() == cellType).findFirst().orElseThrow();
+    private IAgent findWinnerByCellType(final CellType cellType) {
+        return Arrays.stream(agents).filter(bot -> bot.getAgentCellType() == cellType).findFirst().orElseThrow();
     }
 
     private void printResults() {
@@ -121,11 +118,11 @@ public class ImplSelfPlay implements ISelfPlay {
 
 
     public static void main(final String[] args) {
-        final IBot.IBotFactory[] factories = {
-                RandomBot.factory,
-                MinMaxWithABBot.factory,
+        final IAgent.IAgentFactory[] factories = {
+                new RandomAgent.RandomAgentFactory(),
+                new SimpleMinMaxAgent.SimpleMinMaxAgentFactory(),
         };
-        final ISelfPlay selfPlay = new ImplSelfPlay(factories, 4);
+        final ISelfPlay selfPlay = new ImplSelfPlay(factories, 3);
         selfPlay.playSomeGames(100);
     }
 }

@@ -1,20 +1,20 @@
-package aibots;
+package aiagents;
 
 import answer.AIAnswer;
 import board.ImplBoard;
 import enums.CellType;
 
-public interface IBot {
+public interface IAgent {
     @FunctionalInterface
-    interface IBotFactory {
-        IBot createBot(final CellType botCellType);
+    interface IAgentFactory {
+        IAgent createAgent(final CellType agentCellType);
     }
 
     AIAnswer getAnswer(final ImplBoard board);
 
     void setId(final int id);
 
-    CellType getBotCellType();
+    CellType getAgentCellType();
 
     String getName();
 }
